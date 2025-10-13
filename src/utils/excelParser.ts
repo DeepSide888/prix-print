@@ -1,5 +1,26 @@
 import * as XLSX from 'xlsx';
+
 import { Product } from '@/types/product';
+
+type RowValue = string | number | null | undefined;
+
+const toStringValue = (value: RowValue): string => {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  return typeof value === 'string' ? value : value.toString();
+};
+
+const toNumberValue = (value: RowValue): number | undefined => {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  const parsed = Number.parseFloat(toStringValue(value));
+
+  return Number.isNaN(parsed) ? undefined : parsed;
+};
 
 export const parseExcelFile = async (file: File): Promise<Product[]> => {
   return new Promise((resolve, reject) => {
@@ -39,20 +60,20 @@ export const parseExcelFile = async (file: File): Promise<Product[]> => {
         // Parse products
         const products: Product[] = [];
         for (let i = 1; i < jsonData.length; i++) {
-          const row = jsonData[i] as any[];
-          
-          const designation = row[designationIdx]?.toString().trim();
-          const prix = parseFloat(row[prixIdx]);
-          
+          const row = jsonData[i] as RowValue[];
+
+          const designation = toStringValue(row[designationIdx]).trim();
+          const prix = toNumberValue(row[prixIdx]);
+
           // Skip rows with empty designation or price
-          if (!designation || isNaN(prix)) continue;
-          
-          const reference = row[referenceIdx]?.toString().trim() || '';
+          if (!designation || prix === undefined) continue;
+
+          const reference = toStringValue(row[referenceIdx]).trim();
           const refNum = reference.match(/\d+/)?.[0] || '';
-          
+
           products.push({
-            codebar: row[codebarIdx]?.toString().trim() || '',
-            qte: parseFloat(row[qteIdx]) || 0,
+            codebar: toStringValue(row[codebarIdx]).trim(),
+            qte: toNumberValue(row[qteIdx]) ?? 0,
             prix,
             designation,
             reference,
